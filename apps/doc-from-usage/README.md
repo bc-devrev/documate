@@ -4,6 +4,19 @@
 
 Documate uses [Screenpipe](https://github.com/screenpipe/screenpipe) to capture screen OCR and input events, then an LLM to turn that usage into markdown or Word docs (overview, step-by-step guides, screenshots).
 
+## Quick start
+
+This repo contains the full Screenpipe monorepo; Documate is in `apps/doc-from-usage`.
+
+```bash
+git clone https://github.com/devrev/documate.git
+cd documate/apps/doc-from-usage
+npm install
+npm run ui
+```
+
+Then open **http://localhost:3040** in your browser.
+
 ## Prerequisites
 
 1. **Node.js** (to run Documate: `npm run ui`).
