@@ -98,12 +98,8 @@ fn set_fd_limit() {
                         current_soft, new_soft
                     );
                 }
-            } else {
-                eprintln!(
-                    "file descriptor limit already sufficient: {} (requested: {})",
-                    current_soft, desired_limit
-                );
             }
+            // else: limit already sufficient, no need to log (was confusing when captured as "Start failed" by doc-from-usage UI)
         } else {
             eprintln!("warning: failed to get current file descriptor limits");
         }
@@ -685,6 +681,10 @@ async fn main() -> anyhow::Result<()> {
 
     let audio_chunk_duration = Duration::from_secs(cli.audio_chunk_duration);
 
+    let deepgram_key = cli
+        .deepgram_api_key
+        .clone()
+        .or_else(|| std::env::var("DEEPGRAM_API_KEY").ok());
     let mut audio_manager_builder = AudioManagerBuilder::new()
         .audio_chunk_duration(audio_chunk_duration)
         .vad_engine(vad_engine.into())
@@ -693,7 +693,7 @@ async fn main() -> anyhow::Result<()> {
         .transcription_engine(cli.audio_transcription_engine.into())
         .realtime(cli.enable_realtime_audio_transcription)
         .enabled_devices(audio_devices)
-        .deepgram_api_key(cli.deepgram_api_key.clone())
+        .deepgram_api_key(deepgram_key)
         .output_path(PathBuf::from(output_path_clone.clone().to_string()))
         .use_pii_removal(cli.use_pii_removal)
         .use_system_default_audio(cli.use_system_default_audio)

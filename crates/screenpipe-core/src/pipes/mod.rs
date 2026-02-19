@@ -1783,6 +1783,10 @@ impl PipeManager {
                 "idea-tracker",
                 include_str!("../../assets/pipes/idea-tracker/pipe.md"),
             ),
+            (
+                "doc-from-usage",
+                include_str!("../../assets/pipes/doc-from-usage/pipe.md"),
+            ),
         ];
 
         // reminders pipe uses Apple Reminders via osascript — macOS only

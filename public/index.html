@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Documate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --accent-light: rgba(79, 70, 229, 0.08);
+      --navy: #0f172a;
+      --navy-mid: #1e293b;
+      --success: #059669;
+      --success-bg: #ecfdf5;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 0 1.25rem 2rem;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    .header {
+      background: var(--navy);
+      color: #fff;
+      margin: 0 -1.25rem;
+      padding: 1.25rem 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+      border-radius: 0 0 16px 16px;
+    }
+    .header h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 0.2rem; letter-spacing: -0.02em; }
+    .header p { font-size: 0.8125rem; margin: 0; opacity: 0.85; }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+    }
+    .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin: 0 0 0.75rem; }
+    .card-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+    .status-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .status-pill.ok { color: var(--success); background: var(--success-bg); }
+    .status-pill.err { color: var(--danger); background: var(--danger-bg); }
+    .status-pill.muted { color: var(--text-muted); background: var(--border); }
+    .status-pill .status-text { min-height: 1em; }
+    #recording-mic, #recording-error, #recording-hint { font-size: 0.75rem; margin-top: 0.25rem; display: none; }
+    #recording-error { color: var(--danger); }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      font-family: inherit;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover:not(:disabled) { filter: brightness(1.05); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover:not(:disabled) { filter: brightness(1.05); }
+    .btn-ghost { background: var(--border); color: var(--text); }
+    .btn-ghost:hover:not(:disabled) { background: #cbd5e1; }
+
+    .form-group { margin-bottom: 0.75rem; }
+    label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); display: block; margin-bottom: 0.2rem; }
+    input[type="password"], input[type="text"], select {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+    select { cursor: pointer; }
+    .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .row input { flex: 1; min-width: 0; }
+
+    .download-cta { margin-top: 0.75rem; }
+    .download-cta .btn { margin-right: 0.5rem; }
+    .link-subtle { font-size: 0.75rem; color: var(--text-muted); }
+    .link-subtle a { color: var(--accent); text-decoration: none; }
+    .link-subtle a:hover { text-decoration: underline; }
+    #download-ready-status, #download-status { font-size: 0.8125rem; margin-top: 0.5rem; min-height: 1.2em; }
+    #download-ready-status.ok, #download-status.ok { color: var(--success); }
+    #download-status.err { color: var(--danger); }
+
+    .settings-section { margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+    .settings-section:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+    .saved { font-size: 0.7rem; color: var(--success); margin-top: 0.2rem; }
+
+    .help-toggle {
+      font-size: 0.75rem;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem 0;
+      margin-top: 0.5rem;
+      font-family: inherit;
+    }
+    .help-toggle:hover { text-decoration: underline; }
+    .help-content {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      padding: 0.65rem;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+    .help-content.visible { display: block; }
+    .help-content p { margin: 0 0 0.4rem; }
+    .help-content p:last-child { margin-bottom: 0; }
+    .help-content code { font-size: 0.7em; background: var(--surface); padding: 0.1em 0.3em; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Documate</h1>
+    <p>Record your product. Get documentation.</p>
+  </header>
+
+  <section class="card">
+    <h2 class="card-title">Recording</h2>
+    <p class="card-note" style="margin-top:0; margin-bottom:0.75rem;">Run Documate with <code>npm run ui</code> (from Terminal or any shell). When you click <strong>Start recording</strong>, macOS will ask for <strong>Screen Recording</strong> and <strong>Input Monitoring</strong> — allow <strong>Node</strong> or <strong>Terminal</strong>. For speech in docs, add a Deepgram key in Settings and allow <strong>Microphone</strong> when prompted.</p>
+    <div class="status-pill muted" id="recording-status"><span class="status-text">Checking…</span></div>
+    <div class="status-pill muted" id="recording-mic"></div>
+    <div id="recording-error"></div>
+    <div id="recording-hint"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary" id="btn-start">Start recording</button>
+      <button type="button" class="btn btn-danger" id="btn-stop">Stop recording</button>
+      <button type="button" class="btn btn-ghost" id="btn-start-over" title="Kill Screenpipe and reset">Start over</button>
+    </div>
+    <p class="card-note">Wait for <strong>Recording active</strong>, then use your product.</p>
+    <button type="button" class="help-toggle" id="help-recording">Need help?</button>
+    <div class="help-content" id="help-recording-content">
+      <p>If status stays "Screenpipe up; check permissions": open <strong>System Settings → Privacy &amp; Security</strong>. In <strong>Screen Recording</strong> and <strong>Input Monitoring</strong>, click + and add <strong>Node</strong> (e.g. <code>/usr/local/bin/node</code> or your nvm node) and/or <strong>Terminal</strong>, then restart recording.</p>
+      <p>If Stop says "No recording process", click <strong>Start over</strong> to kill any leftover Screenpipe process.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Download documentation</h2>
+    <p class="card-note" style="margin-top:0;">Start recording → use your product (⌘M to capture a screenshot) → Stop → Download. Screenshots may take ~30s after stop.</p>
+    <div class="form-group">
+      <label for="download-format">Format</label>
+      <select id="download-format">
+        <option value="markdown">Markdown + images (ZIP)</option>
+        <option value="docx">Word (.docx)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="download-product">Product name</label>
+      <input type="text" id="download-product" placeholder="e.g. My Product" />
+    </div>
+    <div class="form-group">
+      <label for="download-app">App filter</label>
+      <div class="row">
+        <input type="text" id="download-app" placeholder="All apps" title="Leave empty for all; set e.g. Chrome to filter." />
+        <button type="button" class="btn btn-primary" id="btn-chrome-only">Chrome</button>
+        <button type="button" class="btn btn-ghost" id="btn-all-apps">Clear</button>
+      </div>
+    </div>
+    <div id="download-ready-status"></div>
+    <div class="download-cta">
+      <button type="button" class="btn btn-success" id="btn-download">Download documentation</button>
+      <span class="link-subtle" style="margin-left:0.5rem;"><a href="#" id="link-raw-trace">Raw trace</a></span>
+    </div>
+    <div id="download-status"></div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Settings</h2>
+    <div class="settings-section">
+      <label for="openai-key">OpenAI API key</label>
+      <div class="row">
+        <input type="password" id="openai-key" placeholder="sk-…" autocomplete="off" style="flex:1;" />
+        <button type="button" class="btn btn-primary" id="btn-save-key">Save</button>
+      </div>
+      <div class="saved" id="key-saved" style="display:none;">Saved</div>
+    </div>
+    <div class="settings-section">
+      <label for="deepgram-key">Deepgram API key <span style="font-weight:400;color:var(--text-muted);">(optional, for speech in docs)</span></label>
+      <div class="row">
+        <input type="password" id="deepgram-key" placeholder="Optional" autocomplete="off" style="flex:1;" />
+        <button type="button" class="btn btn-ghost" id="btn-save-deepgram">Save</button>
+      </div>
+      <div class="saved" id="deepgram-saved" style="display:none;">Saved</div>
+    </div>
+  </section>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    $('help-recording').onclick = () => {
+      $('help-recording-content').classList.toggle('visible');
+      $('help-recording').textContent = $('help-recording-content').classList.contains('visible') ? 'Hide help' : 'Need help?';
+    };
+
+    let fastPollTimer = null, recordingStartedAt = 0, hasSeenActive = false, pollCount = 0;
+
+    function setRecordingStatus(msg, type) {
+      const el = $('recording-status');
+      el.querySelector('.status-text').textContent = msg;
+      el.className = 'status-pill ' + (type || 'muted');
+    }
+
+    async function checkHealth() {
+      const el = $('recording-status');
+      const hintEl = $('recording-hint');
+      const errEl = $('recording-error');
+      const graceMs = 20000;
+      const inGrace = recordingStartedAt && (Date.now() - recordingStartedAt < graceMs);
+      try {
+        const r = await fetch('/api/health');
+        const d = await r.json();
+        if (d.ok) {
+          hasSeenActive = true;
+          pollCount = 0;
+          setRecordingStatus(d.message || 'Recording active', 'ok');
+          hintEl.style.display = 'none';
+          const micEl = $('recording-mic');
+          const audioOk = d.audioStatus === 'ok' || d.audioStatus === 'healthy';
+          if (audioOk) {
+            micEl.textContent = 'Microphone: speech will appear in the doc.';
+            micEl.style.display = 'block';
+            micEl.className = 'status-pill ok';
+          } else {
+            micEl.style.display = 'none';
+          }
+        } else if (d.recordingError) {
+          $('recording-mic').style.display = 'none';
+          setRecordingStatus('Start failed', 'err');
+          errEl.textContent = d.recordingError.slice(0, 300);
+          errEl.style.display = 'block';
+          hintEl.textContent = 'Check terminal or add Screen Recording + Input Monitoring.';
+          hintEl.style.display = 'block';
+        } else if (d.startedButExited) {
+          $('recording-mic').style.display = 'none';
+          setRecordingStatus('Screenpipe exited', 'err');
+          errEl.textContent = d.recordingError ? d.recordingError.slice(0, 300) : 'Process exited.';
+          errEl.style.display = 'block';
+          hintEl.style.display = 'none';
+        } else if (inGrace && !hasSeenActive) {
+          pollCount++;
+          setRecordingStatus('Starting…', 'muted');
+          $('recording-mic').style.display = 'none';
+          if (pollCount >= 5) hintEl.style.display = 'block';
+          errEl.style.display = 'none';
+        } else if (inGrace && hasSeenActive) {
+          setRecordingStatus('Recording active (reconnecting…)', 'ok');
+          $('recording-mic').style.display = 'none';
+          errEl.style.display = 'none';
+        } else {
+          setRecordingStatus(d.message || 'Not recording', 'muted');
+          $('recording-mic').style.display = 'none';
+          hintEl.textContent = 'Click Start recording to begin.';
+          hintEl.style.display = 'block';
+          errEl.style.display = 'none';
+        }
+        if (d.ok && fastPollTimer) { clearInterval(fastPollTimer); fastPollTimer = null; }
+      } catch (e) {
+        setRecordingStatus('Cannot reach server', 'err');
+        $('recording-mic').style.display = 'none';
+        hintEl.style.display = 'none';
+        errEl.style.display = 'none';
+      }
+    }
+
+    function startFastPoll() {
+      if (fastPollTimer) clearInterval(fastPollTimer);
+      let count = 0;
+      fastPollTimer = setInterval(() => {
+        checkHealth();
+        if (++count >= 30) { clearInterval(fastPollTimer); fastPollTimer = null; }
+      }, 2000);
+    }
+
+    async function loadSettings() {
+      try {
+        const r = await fetch('/api/settings');
+        const d = await r.json();
+        if (d.hasOpenAiKey) $('openai-key').placeholder = '•••••••• (saved)';
+        if (d.hasDeepgramKey) $('deepgram-key').placeholder = '•••••• (saved)';
+      } catch (_) {}
+    }
+
+    $('btn-start').onclick = async () => {
+      $('btn-start').disabled = true;
+      $('recording-error').style.display = 'none';
+      const statusEl = $('recording-status');
+      for (let n = 3; n >= 1; n--) {
+        statusEl.querySelector('.status-text').textContent = n + '…';
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      const r = await fetch('/api/recording/start', { method: 'POST' });
+      const d = await r.json();
+      setRecordingStatus(d.ok ? 'Starting…' : d.message, d.ok ? 'muted' : 'err');
+      if (d.ok) {
+        recordingStartedAt = Date.now();
+        hasSeenActive = false;
+        pollCount = 0;
+        $('recording-hint').style.display = 'none';
+        startFastPoll();
+        if (readyPollTimer) { clearInterval(readyPollTimer); readyPollTimer = null; }
+        $('download-ready-status').textContent = '';
+        $('btn-download').disabled = false;
+      }
+      $('btn-start').disabled = false;
+    };
+
+    $('btn-chrome-only').onclick = () => { $('download-app').value = 'Chrome'; };
+    $('btn-all-apps').onclick = () => { $('download-app').value = ''; };
+    $('link-raw-trace').onclick = (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams({ productName: $('download-product').value.trim() || 'Product' });
+      if ($('download-app').value.trim()) params.set('appName', $('download-app').value.trim());
+      window.open('/api/raw-trace?' + params.toString(), '_blank');
+    };
+
+    let readyPollTimer = null, lastReadyTotal = null;
+    async function pollUntilReady() {
+      $('download-ready-status').textContent = 'Preparing…';
+      $('download-ready-status').className = '';
+      $('btn-download').disabled = true;
+      lastReadyTotal = null;
+      function stopPoll() {
+        if (readyPollTimer) { clearInterval(readyPollTimer); readyPollTimer = null; }
+      }
+      const poll = async () => {
+        try {
+          const r = await fetch('/api/recording/ready');
+          const d = await r.json();
+          if (d.ready === true) {
+            stopPoll();
+            $('download-ready-status').textContent = 'Ready — click Download to generate docs.';
+            $('download-ready-status').className = 'ok';
+            $('btn-download').disabled = false;
+            return;
+          }
+          const total = d.total;
+          if (typeof total === 'number' && total >= 1 && total === lastReadyTotal) {
+            stopPoll();
+            $('download-ready-status').textContent = 'Ready — click Download to generate docs.';
+            $('download-ready-status').className = 'ok';
+            $('btn-download').disabled = false;
+            return;
+          }
+          lastReadyTotal = typeof total === 'number' ? total : null;
+        } catch (_) {}
+      };
+      await poll();
+      if ($('btn-download').disabled) readyPollTimer = setInterval(poll, 2500);
+    }
+
+    $('btn-stop').onclick = async () => {
+      $('btn-stop').disabled = true;
+      const r = await fetch('/api/recording/stop', { method: 'POST' });
+      const d = await r.json();
+      setRecordingStatus(d.message, d.ok ? 'ok' : 'err');
+      if (d.ok) pollUntilReady();
+      $('btn-stop').disabled = false;
+    };
+
+    $('btn-start-over').onclick = async () => {
+      $('btn-start-over').disabled = true;
+      const r = await fetch('/api/recording/start-over', { method: 'POST' });
+      const d = await r.json();
+      setRecordingStatus(d.message || 'Ready for a new recording.', d.ok ? 'ok' : 'err');
+      $('recording-error').style.display = 'none';
+      $('recording-hint').style.display = 'none';
+      $('download-ready-status').textContent = '';
+      $('btn-download').disabled = false;
+      if (readyPollTimer) { clearInterval(readyPollTimer); readyPollTimer = null; }
+      $('btn-start-over').disabled = false;
+    };
+
+    $('btn-download').onclick = async () => {
+      const format = $('download-format').value;
+      const productName = $('download-product').value.trim() || 'Product';
+      const appName = $('download-app').value.trim() || undefined;
+      const statusEl = $('download-status');
+      const readyStatusEl = $('download-ready-status');
+      statusEl.textContent = 'Generating…';
+      statusEl.className = '';
+      $('btn-download').disabled = true;
+      try {
+        const r = await fetch('/api/download-docs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ format, productName, hours: 2, appName }),
+        });
+        const contentType = r.headers.get('Content-Type') || '';
+        const isJson = contentType.includes('application/json');
+        if (!r.ok) {
+          const d = isJson ? await r.json().catch(() => ({})) : {};
+          statusEl.textContent = d.error || 'Download failed';
+          statusEl.className = 'err';
+          $('btn-download').disabled = false;
+          return;
+        }
+        const blob = await r.blob();
+        const size = blob.size;
+        const blobIsJson = blob.type && blob.type.includes('json');
+        if (size === 0 || blobIsJson) {
+          let errMsg = 'Document generation did not return a valid file.';
+          if (blobIsJson || size < 100) {
+            try {
+              const parsed = JSON.parse(await blob.slice(0, 2000).text());
+              if (parsed && typeof parsed.error === 'string') errMsg = parsed.error;
+            } catch (_) {}
+          }
+          statusEl.textContent = errMsg;
+          statusEl.className = 'err';
+          $('btn-download').disabled = false;
+          return;
+        }
+        const name = r.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || (format === 'docx' ? 'docs.docx' : 'docs.zip');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        readyStatusEl.textContent = 'Downloaded.';
+        readyStatusEl.className = 'ok';
+        const eventCount = r.headers.get('X-Event-Count');
+        const screenshotCount = r.headers.get('X-Screenshot-Count');
+        statusEl.textContent = 'Downloaded' + (eventCount != null ? ` (${eventCount} events, ${screenshotCount ?? '?'} screenshots)` : '');
+        statusEl.className = 'ok';
+      } catch (e) {
+        statusEl.textContent = e.message || 'Failed';
+        statusEl.className = 'err';
+      } finally {
+        $('btn-download').disabled = false;
+      }
+    };
+
+    $('btn-save-key').onclick = async () => {
+      const key = $('openai-key').value.trim();
+      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ openaiApiKey: key || undefined }) });
+      $('key-saved').style.display = 'block';
+      if (key) $('openai-key').placeholder = '•••••••• (saved)';
+      $('openai-key').value = '';
+    };
+
+    $('btn-save-deepgram').onclick = async () => {
+      const key = $('deepgram-key').value.trim();
+      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deepgramApiKey: key || undefined }) });
+      $('deepgram-saved').style.display = 'block';
+      if (key) $('deepgram-key').placeholder = '•••••••• (saved)';
+      $('deepgram-key').value = '';
+    };
+
+    (async () => {
+      const r = await fetch('/api/recording/ready');
+      const d = await r.json();
+      if (d.ready === false) pollUntilReady();
+    })().catch(() => {});
+
+    checkHealth();
+    loadSettings();
+    setInterval(() => { if (!fastPollTimer) checkHealth(); }, 8000);
+  </script>
+</body>
+</html>
