@@ -1,5 +1,5 @@
 /**
- * Simple UI server: recording start/stop, OpenAI token, download docs after recording.
+ * Simple UI server: recording start/stop, AWS/Bedrock settings, download docs after recording.
  * Run: npm run ui  (Node.js, no Bun required)
  */
 
@@ -12,11 +12,12 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
 import archiver from "archiver";
-import { loadConfig, saveConfig, getOpenAiApiKey, getDeepgramApiKey } from "./config.js";
+import { loadConfig, saveConfig, getAwsRegion, getBedrockModel, getDeepgramApiKey } from "./config.js";
 import { fetchUsageEvents } from "./fetch-usage.js";
 import { generateDocumentation, buildRawTracePayload } from "./generate-docs.js";
 import { writeDocsToFolder, getScreenshotContexts } from "./write-docs.js";
 import { getRecordingTimeRange, setRecordingStartTime, setRecordingEndTime, clearRecordingState } from "./recording.js";
+import { DEFAULT_MODEL } from "./llm.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "public");
@@ -250,11 +251,8 @@ async function handleDownload(
     }
   }
 
-  const apiKey = await getOpenAiApiKey();
-  if (!apiKey) {
-    sendJson(res, { error: "OpenAI API key not set. Save your key in Settings in the Documate UI." }, 400);
-    return;
-  }
+  const awsRegion = await getAwsRegion();
+  const model = (await getBedrockModel()) ?? process.env.DOC_FROM_USAGE_MODEL ?? DEFAULT_MODEL;
 
   let tmpDir: string | null = null;
   try {
@@ -299,8 +297,8 @@ async function handleDownload(
     let markdownBody = await generateDocumentation({
       events,
       productName,
-      openaiApiKey: apiKey,
-      model: process.env.DOC_FROM_USAGE_MODEL,
+      awsRegion,
+      model,
       screenshotContexts: screenshotContexts.length > 0 ? screenshotContexts : undefined,
     });
     const audioCountForNote = events.filter((e) => e.type === "audio").length;
@@ -519,7 +517,8 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/api/settings" && req.method === "GET") {
     const config = await loadConfig();
     sendJson(res, {
-      hasOpenAiKey: Boolean(config.openaiApiKey),
+      awsRegion: config.awsRegion ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "",
+      bedrockModel: config.bedrockModel ?? process.env.DOC_FROM_USAGE_MODEL ?? DEFAULT_MODEL,
       hasDeepgramKey: Boolean(config.deepgramApiKey),
     });
     return;
@@ -527,9 +526,14 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/api/settings" && req.method === "POST") {
     try {
       const raw = await readBody(req);
-      const body = JSON.parse(raw) as { openaiApiKey?: string; deepgramApiKey?: string };
-      const updates: { openaiApiKey?: string; deepgramApiKey?: string } = {};
-      if (body.openaiApiKey !== undefined) updates.openaiApiKey = body.openaiApiKey || undefined;
+      const body = JSON.parse(raw) as {
+        awsRegion?: string;
+        bedrockModel?: string;
+        deepgramApiKey?: string;
+      };
+      const updates: { awsRegion?: string; bedrockModel?: string; deepgramApiKey?: string } = {};
+      if (body.awsRegion !== undefined) updates.awsRegion = body.awsRegion.trim() || undefined;
+      if (body.bedrockModel !== undefined) updates.bedrockModel = body.bedrockModel.trim() || undefined;
       if (body.deepgramApiKey !== undefined) updates.deepgramApiKey = body.deepgramApiKey || undefined;
       await saveConfig(updates);
       sendJson(res, { ok: true });

@@ -8,7 +8,7 @@ Documate uses [Screenpipe](https://github.com/screenpipe/screenpipe) to capture 
 
 1. **Node.js** (to run Documate: `npm run ui`).
 2. **Screenpipe** — started by Documate when you click Start recording, or run it separately with the API on `http://localhost:3030`.
-3. **OpenAI-compatible API key** (set in the UI or `OPENAI_API_KEY`).
+3. **AWS credentials** for Amazon Bedrock (Claude). Configure via `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, `AWS_PROFILE`, or `~/.aws/credentials`. Optional: set region in the UI or `AWS_REGION`.
 
 **Permissions (macOS):** Documate runs in **Node** (or **Terminal**). When you click **Start recording**, macOS will prompt for **Screen Recording** and **Input Monitoring** — choose **Node** or **Terminal** and allow. For speech in docs, add a Deepgram key in Settings; when you start recording, allow **Microphone** for Node. No Cursor or special IDE required.
 
@@ -23,9 +23,9 @@ npm run record
 ```
 This runs `node node_modules/screenpipe/bin/screenpipe.js record` and avoids the npx/shell PATH issue.
 
-## Simple UI (recording + OpenAI token)
+## Simple UI (recording + Bedrock)
 
-Run the local UI to **start/stop recording** and **save your OpenAI API key** (no need to use the CLI or set env vars):
+Run the local UI to **start/stop recording** and configure **AWS region / Bedrock model** (credentials come from your AWS env or profile):
 
 ```bash
 cd apps/doc-from-usage
@@ -39,7 +39,7 @@ Then open **http://localhost:3040** in your browser. You can:
 - **Start recording** – runs `npx screenpipe@latest record` in the background.
 - **Stop recording** – stops that process.
 - **Status** – shows whether Screenpipe is reachable and recording (refreshes every 8s).
-- **OpenAI API key** – enter your token and click Save (stored in `~/.doc-from-usage/config.json`).
+- **AWS region / Bedrock model** – optional overrides (stored in `~/.doc-from-usage/config.json`). Claude is invoked via AWS Bedrock using your normal AWS credentials.
 
 To use another port: `DOC_FROM_USAGE_PORT=3050 npm run ui`.
 
@@ -68,7 +68,7 @@ npm install && npm run build
 npm run ui
 ```
 
-Open http://localhost:3040, add their **OpenAI API key** in Settings, and (on macOS) grant **Screen Recording** and **Input Monitoring** when prompted. Optional: **Deepgram API key** for speech in docs.
+Open http://localhost:3040, set **AWS region** if needed in Settings, and (on macOS) grant **Screen Recording** and **Input Monitoring** when prompted. Ensure AWS credentials can call Bedrock. Optional: **Deepgram API key** for speech in docs.
 
 **Environment variables**
 
@@ -77,7 +77,9 @@ Open http://localhost:3040, add their **OpenAI API key** in Settings, and (on ma
 | `DOC_FROM_USAGE_PORT` | 3040 | Port for the UI. |
 | `DOC_FROM_USAGE_HOST` | 127.0.0.1 | Bind address. Use `0.0.0.0` to allow network access. |
 | `SCREENPIPE_API` | http://localhost:3030 | Screenpipe API URL (same machine as UI when using Start recording). |
-| `OPENAI_API_KEY` | — | Can be set in env or saved in the UI. |
+| `AWS_REGION` / `AWS_DEFAULT_REGION` | us-east-1 | Bedrock region. Can also be saved in the UI. |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | Or use `AWS_PROFILE` / shared credentials. |
+| `DOC_FROM_USAGE_MODEL` | `us.anthropic.claude-sonnet-5` | Bedrock Claude model ID. |
 
 ## End-to-end runbook (CLI)
 
@@ -86,7 +88,8 @@ Open http://localhost:3040, add their **OpenAI API key** in Settings, and (on ma
 ```bash
 cd apps/doc-from-usage
 npm install && npm run build
-export OPENAI_API_KEY=sk-...
+export AWS_REGION=us-east-1
+# ensure AWS credentials are available (env, profile, or ~/.aws/credentials)
 ```
 
 1. **Start recording** (starts Screenpipe): `npm run record` — wait for "Recording started".
@@ -105,7 +108,8 @@ With screenshots + Chrome only:
 ```bash
 cd apps/doc-from-usage
 npm install && npm run build
-export OPENAI_API_KEY=sk-...
+export AWS_REGION=us-east-1
+# ensure AWS credentials are available (env, profile, or ~/.aws/credentials)
 npm run generate -- --out ./docs.md --hours 2
 ```
 
@@ -140,9 +144,10 @@ bun run start -- --app "Chrome" --window "Settings" \
 
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | Required for the LLM (OpenAI or compatible). |
-| `OPENAI_BASE_URL` | Optional. Override API base (e.g. Anthropic proxy). |
-| `DOC_FROM_USAGE_MODEL` | Optional. Model name (default: `gpt-5.2`). |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` or `AWS_PROFILE` | Required for Bedrock (Claude). |
+| `AWS_REGION` / `AWS_DEFAULT_REGION` | Optional. Bedrock region (default: `us-east-1`). |
+| `DOC_FROM_USAGE_MODEL` | Optional. Bedrock model ID (default: `us.anthropic.claude-sonnet-5`). |
+| `DOC_FROM_USAGE_ENRICH_MODEL` | Optional. Model for step enrichment (default: `us.anthropic.claude-haiku-4-5`). |
 
 ## Screenpipe Pipe
 
@@ -185,7 +190,7 @@ const result = await runPipeline({
   endTime: "2025-02-18T12:00:00Z",
   storeBaseDir: "./data",
   productName: "My App",
-  openaiApiKey: process.env.OPENAI_API_KEY,
+  awsRegion: process.env.AWS_REGION,
   renderScreenshots: true,
 });
 

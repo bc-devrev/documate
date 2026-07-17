@@ -10,7 +10,7 @@
  *   doc-from-usage --out ./docs.md --app Chrome --hours 2
  *   doc-from-usage --output-folder ./docs --format docx --product "My App" --hours 1
  *
- * Env: OPENAI_API_KEY (required), OPENAI_BASE_URL (optional), DOC_FROM_USAGE_MODEL (optional)
+ * Env: AWS credentials (required for Bedrock), AWS_REGION (optional), DOC_FROM_USAGE_MODEL (optional)
  */
 
 import { runDocFromUsage } from "./index.js";
@@ -75,7 +75,7 @@ function parseArgs(): {
 
 function printHelp() {
   console.log(`
-Documate CLI – Record usage and generate docs from Screenpipe + OpenAI (no web UI).
+Documate CLI – Record usage and generate docs from Screenpipe + Claude on AWS Bedrock (no web UI).
 
 Commands:
   record              Start Screenpipe recording in the background.
@@ -98,7 +98,8 @@ Generate options:
   --api <URL>        Screenpipe API base URL (default: http://localhost:3030).
   --limit <N>        Max events to fetch (default: 100).
 
-Env: OPENAI_API_KEY (required), DOC_FROM_USAGE_MODEL (optional).
+Env: AWS credentials for Bedrock (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or AWS_PROFILE),
+     AWS_REGION (optional, default us-east-1), DOC_FROM_USAGE_MODEL (optional Bedrock model ID).
 
 Audio: When you start recording with "doc-from-usage record", realtime transcription is
 enabled so your speech is included in the doc. If you run Screenpipe yourself, use:

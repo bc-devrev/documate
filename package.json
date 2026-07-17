@@ -26,10 +26,10 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@screenpipe/js": "file:../../packages/screenpipe-js/node-sdk",
+    "@aws-sdk/client-bedrock-runtime": "^3.1090.0",
+    "@screenpipe/js": "file:./packages/screenpipe-js/node-sdk",
     "archiver": "^7.0.1",
     "docx": "^9.0.0",
-    "openai": "^4.77.0",
     "screenpipe": "latest",
     "sharp": "^0.33.5"
   }

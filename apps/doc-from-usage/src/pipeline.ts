@@ -16,7 +16,7 @@ export interface PipelineOptions {
   windowName?: string;
   storeBaseDir: string;
   productName?: string;
-  openaiApiKey?: string;
+  awsRegion?: string;
   /** If true, fetch frame and draw hotspot for each step with position+frameId. */
   renderScreenshots?: boolean;
 }
@@ -28,7 +28,7 @@ export interface PipelineResult {
 }
 
 export async function runPipeline(options: PipelineOptions): Promise<PipelineResult> {
-  const { baseUrl, storeBaseDir, productName, openaiApiKey, renderScreenshots = false } = options;
+  const { baseUrl, storeBaseDir, productName, awsRegion, renderScreenshots = false } = options;
 
   const { sessions } = await importSessions({
     baseUrl,
@@ -49,7 +49,7 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
   const renderedSteps = await generateDocFromSteps({
     steps,
     productName,
-    openaiApiKey,
+    awsRegion,
   });
 
   if (renderScreenshots && baseUrl) {
