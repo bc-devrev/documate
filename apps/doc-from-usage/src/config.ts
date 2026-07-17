@@ -10,6 +10,12 @@ import type { OutputFormat } from "./types.js";
 const CONFIG_DIR = process.env.DOC_FROM_USAGE_CONFIG_DIR ?? join(homedir(), ".doc-from-usage");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
+/** Speech-to-text engine. "whisper" is local (no key); "deepgram" is cloud realtime; "off" disables speech. */
+export type TranscriptionEngine = "whisper" | "deepgram" | "off";
+
+/** Screenpipe engine ID used when transcriptionEngine is "whisper" (local, no key). */
+export const WHISPER_ENGINE = "whisper-large-v3-turbo-quantized";
+
 export interface SavedConfig {
   /** AWS region for Bedrock (overrides AWS_REGION when set). */
   awsRegion?: string;
@@ -17,6 +23,12 @@ export interface SavedConfig {
   bedrockModel?: string;
   /** Deepgram API key for realtime speech transcription (saved locally; enables speech in docs when Start recording is used). */
   deepgramApiKey?: string;
+  /**
+   * Speech-to-text engine for recording narration.
+   * "whisper" runs locally with no API key; "deepgram" uses cloud realtime transcription (needs a Deepgram key);
+   * "off" disables speech transcription. Defaults to "whisper".
+   */
+  transcriptionEngine?: TranscriptionEngine;
   screenpipeRecordCommand?: string;
   /** Folder path for documentation output (e.g. ~/Documents/MyProduct/docs) */
   outputFolder?: string;
@@ -71,4 +83,18 @@ export async function getDeepgramApiKey(): Promise<string | undefined> {
   if (process.env.DEEPGRAM_API_KEY) return process.env.DEEPGRAM_API_KEY;
   const config = await loadConfig();
   return config.deepgramApiKey;
+}
+
+/**
+ * Resolve the speech-to-text engine from env or saved config.
+ * Precedence: DOC_FROM_USAGE_TRANSCRIPTION env > saved config > default.
+ * Default: "deepgram" if a Deepgram key is available (back-compat), otherwise local "whisper".
+ */
+export async function getTranscriptionEngine(): Promise<TranscriptionEngine> {
+  const fromEnv = process.env.DOC_FROM_USAGE_TRANSCRIPTION?.trim().toLowerCase();
+  if (fromEnv === "whisper" || fromEnv === "deepgram" || fromEnv === "off") return fromEnv;
+  const config = await loadConfig();
+  if (config.transcriptionEngine) return config.transcriptionEngine;
+  const hasDeepgram = Boolean(await getDeepgramApiKey());
+  return hasDeepgram ? "deepgram" : "whisper";
 }

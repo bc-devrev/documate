@@ -80,6 +80,15 @@ Open http://localhost:3040, set **AWS region** if needed in Settings, and (on ma
 | `AWS_REGION` / `AWS_DEFAULT_REGION` | us-east-1 | Bedrock region. Can also be saved in the UI. |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | Or use `AWS_PROFILE` / shared credentials. |
 | `DOC_FROM_USAGE_MODEL` | `us.anthropic.claude-sonnet-5` | Bedrock Claude model ID. |
+<<<<<<< HEAD
+=======
+| `DOC_FROM_USAGE_ENRICH_MODEL` | `us.anthropic.claude-haiku-4-5` | Model used for step enrichment. |
+| `DOC_FROM_USAGE_TRANSCRIPTION` | `whisper` | Speech engine: `whisper` (local, no key), `deepgram`, or `off`. |
+| `DEEPGRAM_API_KEY` | — | Optional. Deepgram key, used only when the engine is `deepgram`. |
+| `DOC_FROM_USAGE_PORT` | `3040` | Port for the web UI. |
+| `DOC_FROM_USAGE_HOST` | `127.0.0.1` | Bind address. Use `0.0.0.0` for network access. |
+| `SCREENPIPE_API` | `http://localhost:3030` | Screenpipe API URL. |
+>>>>>>> d32923f0 (use local Whisper for speech-to-text)
 
 ## End-to-end runbook (CLI)
 
