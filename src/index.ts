@@ -1,6 +1,6 @@
 import { fetchUsageEvents } from "./fetch-usage.js";
 import { generateDocumentation } from "./generate-docs.js";
-import { getOpenAiApiKey, loadConfig } from "./config.js";
+import { getAwsRegion, getBedrockModel, loadConfig } from "./config.js";
 import { writeDocsToFolder } from "./write-docs.js";
 import type { DocFromUsageConfig } from "./types.js";
 import { writeFile, mkdir } from "fs/promises";
@@ -72,13 +72,13 @@ export async function runDocFromUsage(config: DocFromUsageConfig): Promise<{ out
   }
 
   const productName = config.productName ?? config.appName ?? "Product";
-  const openaiApiKey = config.openaiApiKey ?? (await getOpenAiApiKey());
+  const awsRegion = config.awsRegion ?? (await getAwsRegion());
+  const model = config.model ?? (await getBedrockModel());
   const markdownBody = await generateDocumentation({
     events,
     productName,
-    openaiApiKey,
-    openaiBaseUrl: config.openaiBaseUrl,
-    model: config.model,
+    awsRegion,
+    model,
   });
 
   const outputFolder = config.outputFolder ?? (await loadConfig()).outputFolder;

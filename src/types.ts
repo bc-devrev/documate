@@ -19,11 +19,9 @@ export interface DocFromUsageConfig {
   outputPath?: string;
   /** Product name for the doc title (default: app name or "Product") */
   productName?: string;
-  /** LLM: OpenAI API key (or set OPENAI_API_KEY) */
-  openaiApiKey?: string;
-  /** LLM: Base URL for OpenAI-compatible API (e.g. Anthropic proxy, local) */
-  openaiBaseUrl?: string;
-  /** LLM model (default: gpt-5.2) */
+  /** AWS region for Bedrock (or set AWS_REGION) */
+  awsRegion?: string;
+  /** Bedrock Claude model ID (default: us.anthropic.claude-sonnet-5) */
   model?: string;
 }
 

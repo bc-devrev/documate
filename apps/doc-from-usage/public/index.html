@@ -171,7 +171,7 @@
 
   <section class="card">
     <h2 class="card-title">Recording</h2>
-    <p class="card-note" style="margin-top:0; margin-bottom:0.75rem;">Run Documate with <code>npm run ui</code> (from Terminal or any shell). When you click <strong>Start recording</strong>, macOS will ask for <strong>Screen Recording</strong> and <strong>Input Monitoring</strong> — allow <strong>Node</strong> or <strong>Terminal</strong>. For speech in docs, add a Deepgram key in Settings and allow <strong>Microphone</strong> when prompted.</p>
+    <p class="card-note" style="margin-top:0; margin-bottom:0.75rem;">Run Documate with <code>npm run ui</code> (from Terminal or any shell). When you click <strong>Start recording</strong>, macOS will ask for <strong>Screen Recording</strong> and <strong>Input Monitoring</strong> — allow <strong>Node</strong> or <strong>Terminal</strong>. For speech in docs, keep the default <strong>Whisper</strong> (or pick Deepgram) in Settings and allow <strong>Microphone</strong> when prompted.</p>
     <div class="status-pill muted" id="recording-status"><span class="status-text">Checking…</span></div>
     <div class="status-pill muted" id="recording-mic"></div>
     <div id="recording-error"></div>
@@ -222,15 +222,44 @@
   <section class="card">
     <h2 class="card-title">Settings</h2>
     <div class="settings-section">
-      <label for="openai-key">OpenAI API key</label>
+      <label for="aws-region">AWS region <span style="font-weight:400;color:var(--text-muted);">(Bedrock)</span></label>
       <div class="row">
-        <input type="password" id="openai-key" placeholder="sk-…" autocomplete="off" style="flex:1;" />
-        <button type="button" class="btn btn-primary" id="btn-save-key">Save</button>
+        <input type="text" id="aws-region" placeholder="us-east-1" autocomplete="off" style="flex:1;" />
+        <button type="button" class="btn btn-primary" id="btn-save-aws">Save</button>
       </div>
-      <div class="saved" id="key-saved" style="display:none;">Saved</div>
+      <p style="margin:0.5rem 0 0;font-size:0.85rem;color:var(--text-muted);">
+        Claude runs on Amazon Bedrock. Use your normal AWS credentials
+        (<code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_PROFILE</code>, or <code>~/.aws/credentials</code>).
+        The IAM principal needs <code>bedrock:InvokeModel</code> on the Claude model.
+      </p>
+      <div class="saved" id="aws-saved" style="display:none;">Saved</div>
     </div>
     <div class="settings-section">
-      <label for="deepgram-key">Deepgram API key <span style="font-weight:400;color:var(--text-muted);">(optional, for speech in docs)</span></label>
+      <label for="bedrock-model">Bedrock model ID <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+      <div class="row">
+        <input type="text" id="bedrock-model" placeholder="us.anthropic.claude-sonnet-5" autocomplete="off" style="flex:1;" />
+        <button type="button" class="btn btn-ghost" id="btn-save-model">Save</button>
+      </div>
+      <div class="saved" id="model-saved" style="display:none;">Saved</div>
+    </div>
+    <div class="settings-section">
+      <label for="transcription-engine">Speech in docs <span style="font-weight:400;color:var(--text-muted);">(transcribe your narration)</span></label>
+      <div class="row">
+        <select id="transcription-engine" style="flex:1;">
+          <option value="whisper">Whisper (local, no API key)</option>
+          <option value="deepgram">Deepgram (cloud, needs key)</option>
+          <option value="off">Off (no speech)</option>
+        </select>
+        <button type="button" class="btn btn-primary" id="btn-save-transcription">Save</button>
+      </div>
+      <p style="margin:0.5rem 0 0;font-size:0.85rem;color:var(--text-muted);">
+        Talk while you record and Claude quotes what you said. <strong>Whisper</strong> runs on your
+        machine with no key. <strong>Deepgram</strong> is cloud-based and needs the key below.
+      </p>
+      <div class="saved" id="transcription-saved" style="display:none;">Saved</div>
+    </div>
+    <div class="settings-section">
+      <label for="deepgram-key">Deepgram API key <span style="font-weight:400;color:var(--text-muted);">(only if using Deepgram above)</span></label>
       <div class="row">
         <input type="password" id="deepgram-key" placeholder="Optional" autocomplete="off" style="flex:1;" />
         <button type="button" class="btn btn-ghost" id="btn-save-deepgram">Save</button>
@@ -330,8 +359,10 @@
       try {
         const r = await fetch('/api/settings');
         const d = await r.json();
-        if (d.hasOpenAiKey) $('openai-key').placeholder = '•••••••• (saved)';
+        if (d.awsRegion) $('aws-region').value = d.awsRegion;
+        if (d.bedrockModel) $('bedrock-model').placeholder = d.bedrockModel;
         if (d.hasDeepgramKey) $('deepgram-key').placeholder = '•••••• (saved)';
+        if (d.transcriptionEngine) $('transcription-engine').value = d.transcriptionEngine;
       } catch (_) {}
     }
 
@@ -485,12 +516,23 @@
       }
     };
 
-    $('btn-save-key').onclick = async () => {
-      const key = $('openai-key').value.trim();
-      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ openaiApiKey: key || undefined }) });
-      $('key-saved').style.display = 'block';
-      if (key) $('openai-key').placeholder = '•••••••• (saved)';
-      $('openai-key').value = '';
+    $('btn-save-aws').onclick = async () => {
+      const awsRegion = $('aws-region').value.trim();
+      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ awsRegion: awsRegion || undefined }) });
+      $('aws-saved').style.display = 'block';
+    };
+
+    $('btn-save-model').onclick = async () => {
+      const bedrockModel = $('bedrock-model').value.trim();
+      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bedrockModel: bedrockModel || undefined }) });
+      $('model-saved').style.display = 'block';
+      if (bedrockModel) $('bedrock-model').placeholder = bedrockModel;
+    };
+
+    $('btn-save-transcription').onclick = async () => {
+      const transcriptionEngine = $('transcription-engine').value;
+      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transcriptionEngine }) });
+      $('transcription-saved').style.display = 'block';
     };
 
     $('btn-save-deepgram').onclick = async () => {

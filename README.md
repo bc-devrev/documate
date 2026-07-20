@@ -1,179 +1,166 @@
 # Documate
 
-**Record your product. Get documentation.**
+Record yourself using a product. Get a written guide (Markdown or Word) with screenshots.
 
-Documate uses [Screenpipe](https://github.com/screenpipe/screenpipe) to capture screen OCR and input events, then an LLM to turn that usage into markdown or Word docs (overview, step-by-step guides, screenshots).
+Documate starts [Screenpipe](https://github.com/screenpipe/screenpipe) for you, captures what you do on screen (and optionally what you say), then asks Claude on **AWS Bedrock** to write the docs. Raw screen data stays on your machine; only a condensed text trace goes to the LLM.
 
-## Prerequisites
+---
 
-1. **Node.js** (to run Documate: `npm run ui`).
-2. **Screenpipe** — started by Documate when you click Start recording, or run it separately with the API on `http://localhost:3030`.
-3. **OpenAI-compatible API key** (set in the UI or `OPENAI_API_KEY`).
+## How to use it (web UI)
 
-**Permissions (macOS):** Documate runs in **Node** (or **Terminal**). When you click **Start recording**, macOS will prompt for **Screen Recording** and **Input Monitoring** — choose **Node** or **Terminal** and allow. For speech in docs, add a Deepgram key in Settings; when you start recording, allow **Microphone** for Node. No Cursor or special IDE required.
+This is the normal way to run Documate.
 
-**From this repo:** If `@screenpipe/js` is linked from source, build it first:  
-`cd ../../packages/screenpipe-js/node-sdk && npm run build`
+### 1. One-time setup
 
-**If `npx screenpipe@latest record` gives "sh: screenpipe: command not found"** in Terminal, run Screenpipe via Node from this app instead:
 ```bash
-cd apps/doc-from-usage
-npm install   # if you haven't
-npm run record
+npm install
 ```
-This runs `node node_modules/screenpipe/bin/screenpipe.js record` and avoids the npx/shell PATH issue.
 
-## Simple UI (recording + OpenAI token)
+You need:
 
-Run the local UI to **start/stop recording** and **save your OpenAI API key** (no need to use the CLI or set env vars):
+- **Node.js 18+**
+- **AWS credentials** that can call Bedrock (Claude). Documate does **not** use an Anthropic or OpenAI API key. Use `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, `AWS_PROFILE`, or `~/.aws/credentials`, and enable the Claude models in Bedrock for your region.
 
 ```bash
-cd apps/doc-from-usage
+export AWS_REGION=us-east-1
+# credentials via env, AWS_PROFILE, or ~/.aws/credentials
+```
+
+If `@screenpipe/js` is linked from source in this monorepo, build it once:
+
+```bash
+cd packages/screenpipe-js/node-sdk && npm run build
+```
+
+**macOS:** the first time you record, grant **Screen Recording** and **Input Monitoring** (and **Microphone** if you use speech) to **Node** or **Terminal**. Without those, recordings come back empty.
+
+### 2. Start the UI
+
+```bash
 npm run ui
 ```
 
-Then open **http://localhost:3040** in your browser. You can:
+Open **http://localhost:3040**.
 
-- **Output folder** – choose where documentation is saved. You can add your own images and edit the files there. If you click **Start recording** without a folder set, we’ll ask you for it.
-- **Format** – **Markdown** (recommended for product docs): a `.md` file plus an `images/` subfolder with screenshots. You get a normal folder you can open in any editor, add images, and keep in git. **Word (.docx)**: one file with text and images, good for sharing with non-devs.
-- **Start recording** – runs `npx screenpipe@latest record` in the background.
-- **Stop recording** – stops that process.
-- **Status** – shows whether Screenpipe is reachable and recording (refreshes every 8s).
-- **OpenAI API key** – enter your token and click Save (stored in `~/.doc-from-usage/config.json`).
+### 3. Record → generate → download
 
-To use another port: `DOC_FROM_USAGE_PORT=3050 npm run ui`.
+1. *(Optional)* Open **Settings**: set AWS region / Bedrock model, and choose speech (**Whisper** = local default, **Deepgram** = cloud + API key, or **Off**).
+2. On the main page, set **Product name**, optional **App filter** (e.g. Chrome only), and **Format** (Markdown ZIP or Word `.docx`).
+3. Click **Start recording** and wait until status says **Recording active**.
+4. Use the product you want documented (click through the flow; narrate out loud if speech is enabled).
+5. Click **Stop recording**. This marks the end of the session but **keeps Screenpipe running** so generation can read the data.
+6. Click **Download documentation**. Wait if needed — screenshots can take ~20–30s after stop. The file downloads in the browser (nothing is written to a folder automatically).
+7. When done, click **Start over** to stop Screenpipe and reset.
 
-## Let others use it
+That’s the whole loop.
 
-**Option 1: Others on your network use your running UI**
+---
 
-Bind the server to all interfaces so anyone on the same Wi‑Fi/LAN can open the app in their browser:
+## Command line
+
+Same idea without a browser. Build once, then record and generate as separate steps. **Order matters:** generate while Screenpipe is still running; kill it only after.
 
 ```bash
-cd apps/doc-from-usage
-DOC_FROM_USAGE_HOST=0.0.0.0 npm run ui
+npm install && npm run build
+
+npm run record              # 1. start Screenpipe — wait for "Recording started"
+# ... use your product ...
+npm run record:stop         # 2. mark end time (Screenpipe stays up)
+npm run generate -- --out ./docs.md   # 3. generate while Screenpipe is still running
+npm run record:kill         # 4. stop Screenpipe when finished
 ```
 
-Then share the URL: `http://<this-machine-ip>:3040` (e.g. `http://192.168.1.10:3040`). Find your IP: `ipconfig getifaddr en0` (macOS) or `hostname -I` (Linux).  
-Recording and Screenpipe still run on the machine where the UI is running; others just use the browser on that host.
-
-**Option 2: Others run the app on their own machine**
-
-They need Node.js, then:
+Other useful generate forms:
 
 ```bash
-git clone <this-repo>
-cd apps/doc-from-usage
-npm install && npm run build
-npm run ui
-```
+# Folder with screenshots, one app only
+npm run generate -- --output-folder ./my-docs --format markdown --app "Chrome" --product "My App"
 
-Open http://localhost:3040, add their **OpenAI API key** in Settings, and (on macOS) grant **Screen Recording** and **Input Monitoring** when prompted. Optional: **Deepgram API key** for speech in docs.
-
-**Environment variables**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DOC_FROM_USAGE_PORT` | 3040 | Port for the UI. |
-| `DOC_FROM_USAGE_HOST` | 127.0.0.1 | Bind address. Use `0.0.0.0` to allow network access. |
-| `SCREENPIPE_API` | http://localhost:3030 | Screenpipe API URL (same machine as UI when using Start recording). |
-| `OPENAI_API_KEY` | — | Can be set in env or saved in the UI. |
-
-## End-to-end runbook (CLI)
-
-**Screenpipe must be running when you generate** (it serves the API). Recommended: let doc-from-usage start it.
-
-```bash
-cd apps/doc-from-usage
-npm install && npm run build
-export OPENAI_API_KEY=sk-...
-```
-
-1. **Start recording** (starts Screenpipe): `npm run record` — wait for "Recording started".
-2. **Use your product** (Chrome, etc.); optionally speak ("click this to open a ticket").
-3. **Stop** (saves end time; **do not kill Screenpipe**): `npm run record:stop`
-4. **Generate** (Screenpipe must still be running): `npm run generate -- --out ./docs.md`
-5. **Then** stop Screenpipe: `npm run record:kill` (or `pkill -f screenpipe`).
-
-With screenshots + Chrome only:  
-`npm run generate -- --output-folder ./my-docs --app Chrome`
-
-**If you get 0 events:** (1) Run generate **before** killing Screenpipe — `record:stop` no longer kills it. (2) Check API: `curl http://localhost:3030/health`. (3) Check time range: `cat ~/.screenpipe/doc-from-usage-recording.json`. (4) Try without `--app` or use `--hours 2`. (5) macOS: grant Screen Recording, Input Monitoring, Microphone to Node/Terminal.
-
-## Quick start (CLI)
-
-```bash
-cd apps/doc-from-usage
-npm install && npm run build
-export OPENAI_API_KEY=sk-...
+# No prior record/stop — use the last N hours of Screenpipe data instead
 npm run generate -- --out ./docs.md --hours 2
 ```
 
-- `--app` – Filter by application name (e.g. your app’s name in the taskbar).
-- `--window` – Filter by window title substring (e.g. "Dashboard").
-- `--hours` – Look back this many hours (default: 2).
-- `--start` / `--end` – Or set explicit ISO time range.
-- `--out <path>` – Single output file (use this or `--output-folder`).
-- `--output-folder <dir>` – Output folder: creates a dated `.md` or `.docx` plus `images/` (for markdown). You can add images and edit there.
-- `--format markdown|docx` – Use with `--output-folder`. Default: markdown.
-- `--product` – Product name used in the doc title (default: app name).
-- `--api` – Screenpipe API base URL (default: `http://localhost:3030`).
-- `--limit` – Max search results per content type (default: 100).
+### Generate options
 
-## Example
+| Option | Description |
+|--------|-------------|
+| `--out <path>` | Single Markdown file (no screenshots). |
+| `--output-folder <dir>` | Folder: dated `.md` + `images/`, or a `.docx`. |
+| `--format markdown\|docx` | With `--output-folder`. Default: `markdown`. |
+| `--app <name>` | Only this app (e.g. `Chrome`). |
+| `--window <title>` | Only windows whose title contains this text. |
+| `--hours <N>` | Look-back if you didn’t record (default: 2). |
+| `--start <ISO>` / `--end <ISO>` | Explicit time range instead of `--hours`. |
+| `--product <name>` | Product name in the doc title (defaults to `--app`). |
+| `--api <url>` | Screenpipe API (default `http://localhost:3030`). |
+| `--limit <N>` | Max events per content type (default: 100). |
 
-Document the last 4 hours of usage for an app named “Acme” and write to `./docs/acme.md`:
+`node dist/cli.js --help` prints the same list.
+
+---
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (or `AWS_PROFILE`) | — | **Required** for Bedrock. |
+| `AWS_REGION` / `AWS_DEFAULT_REGION` | `us-east-1` | Bedrock region (also settable in the UI). |
+| `DOC_FROM_USAGE_MODEL` | `us.anthropic.claude-sonnet-5` | Bedrock Claude model ID. |
+| `DOC_FROM_USAGE_ENRICH_MODEL` | `us.anthropic.claude-haiku-4-5` | Model for step enrichment. |
+| `DOC_FROM_USAGE_TRANSCRIPTION` | `whisper` | `whisper`, `deepgram`, or `off`. |
+| `DEEPGRAM_API_KEY` | — | Only if transcription is `deepgram`. |
+| `DOC_FROM_USAGE_PORT` | `3040` | Web UI port. |
+| `DOC_FROM_USAGE_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` for LAN access). |
+| `SCREENPIPE_API` | `http://localhost:3030` | Screenpipe API URL. |
+
+UI settings are also saved under `~/.doc-from-usage/config.json`.
 
 ```bash
-bun run start -- --app "Acme" --hours 4 --out ./docs/acme.md --product "Acme"
+DOC_FROM_USAGE_PORT=3050 npm run ui
+DOC_FROM_USAGE_HOST=0.0.0.0 npm run ui   # then open http://<your-ip>:3040
 ```
 
-Document a specific time range and only windows with “Settings” in the title:
+Recording still runs on the machine that started the UI; others only drive the browser.
 
-```bash
-bun run start -- --app "Chrome" --window "Settings" \
-  --start "2025-02-18T09:00:00Z" --end "2025-02-18T12:00:00Z" \
-  --out ./docs/settings-flow.md
-```
+---
 
-## Environment
+## Troubleshooting
 
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | Required for the LLM (OpenAI or compatible). |
-| `OPENAI_BASE_URL` | Optional. Override API base (e.g. Anthropic proxy). |
-| `DOC_FROM_USAGE_MODEL` | Optional. Model name (default: `gpt-5.2`). |
+**"Screenpipe is not running" / connection refused**  
+Start recording first and wait for **Recording active**. On the CLI, run `npm run record` and keep Screenpipe up through `generate`.
 
-## Screenpipe Pipe
+**Empty doc / "No events in this time range"**  
+- Generate **before** killing Screenpipe (`Stop` / `record:stop` do not kill it; `Start over` / `record:kill` do).  
+- Record again and actually use the app, or widen `--hours`.  
+- Clear the app filter if the name didn’t match.  
+- macOS: confirm Screen Recording + Input Monitoring for Node/Terminal.  
+- Sanity check: `curl http://localhost:3030/health` and `curl "http://localhost:3030/search?content_type=ocr&limit=5"`.
 
-You can also run this as a **Screenpipe Pipe** (plugin):
+**No speech in the doc**  
+Transcription isn’t **Off**, Microphone is allowed, and (for Deepgram) the API key is saved. Otherwise Documate falls back to local Whisper.
 
-1. Ensure the built-in pipe is installed (it ships with Screenpipe: **doc-from-usage**).
-2. In the Screenpipe app, open Pipes and run **doc-from-usage** manually.
-3. The pipe prompt tells the AI to query the Screenpipe API for the time range (and optional app/window), then generate docs and write to a file. Configure **product_app_name** / **product_window_name** / **output_path** in the pipe if needed.
+**Port already in use**  
+`DOC_FROM_USAGE_PORT=3041 npm run ui`
 
-## How it works
+**`npx screenpipe@latest record` → "screenpipe: command not found"**  
+Use Documate’s recorder instead: `npm run record` (runs Screenpipe via Node from this package).
 
-1. **Fetch** – Calls Screenpipe `GET /search` for `content_type=ocr` and `content_type=input` with your time range and optional `app_name` / `window_name`.
-2. **Order** – Sorts all events by timestamp into a single chronological trace.
-3. **Generate** – Sends the trace to an LLM with a system prompt to produce markdown: overview, features, step-by-step guides, UI reference.
-4. **Write** – Saves to your chosen **output folder**:
-   - **Markdown**: creates a dated `.md` file and an `images/` subfolder. Key screenshots from the trace are fetched from Screenpipe and saved as `screen-1.png`, etc., and appended to the doc. You can add more images and edit the markdown.
-   - **Word**: creates a single dated `.docx` file with the same content and embedded images.
-   - If you don’t set an output folder (e.g. CLI only with `--out`), a single `.md` file is written to the path you give.
+---
 
-All usage data stays local (Screenpipe); only the aggregated trace is sent to the LLM provider.
+## How it works (short)
 
-## Pipeline: sessions, workflow steps, and step-by-step docs
+1. **Capture** — Screenpipe records OCR + input (and audio if enabled) locally.  
+2. **Fetch** — Documate queries those events for your time range / app filter.  
+3. **Generate** — Claude on Bedrock turns the trace into a guide.  
+4. **Assemble** — screenshots are attached; you get Markdown or `.docx`.
 
-The app includes a **pipeline** that implements:
+---
 
-1. **Session import** – Fetches OCR + input events from the Screenpipe API, groups them into sessions by time window (default 5 min gap), and stores each session (timeline, frames, clicks, keyboard, OCR, metadata) under a configurable data directory.
-2. **Workflow detection** – Converts raw events into structured steps (open page, click, enter text, navigate menu, submit form) using heuristics: click + nearby OCR/element name, window/URL change, Enter key, etc. Each step has `stepNumber`, `action`, `target`, `position`, `frameId`, `timestamp`, `contextText`.
-3. **Screenshot rendering** – For each step with a `frameId` and `position`, fetches the frame image and draws a hotspot (circle) at the click position; optionally highlights an OCR bounding box.
-4. **AI documentation generator** – Converts steps into step-by-step docs: **title**, **instruction**, optional **explanation**, **tips**, **warnings** (one LLM call for the whole list).
+## Advanced
 
-### Programmatic usage
+### Programmatic pipeline
+
+For more structured click-by-click step docs (title, instruction, tips, hotspot screenshots):
 
 ```ts
 import { runPipeline } from "./src/pipeline.js";
@@ -185,7 +172,7 @@ const result = await runPipeline({
   endTime: "2025-02-18T12:00:00Z",
   storeBaseDir: "./data",
   productName: "My App",
-  openaiApiKey: process.env.OPENAI_API_KEY,
+  awsRegion: process.env.AWS_REGION,
   renderScreenshots: true,
 });
 
@@ -196,12 +183,14 @@ await writeRenderedStepsToFolder({
 });
 ```
 
-### Module layout
-
 | Module | Path | Purpose |
 |--------|------|---------|
-| Session import | `src/session/` | `fetch-events.ts`, `group-sessions.ts`, `session-store.ts`, `import-session.ts` |
-| Workflow detection | `src/workflow/detect-steps.ts` | Raw events → `WorkflowStep[]` |
-| Screenshot rendering | `src/screenshot/render-step.ts` | Frame + hotspot (and optional bbox) → PNG buffer |
-| AI doc from steps | `src/doc-from-steps/generate-doc.ts`, `write-rendered-docs.ts` | Steps → title/instruction/explanation/tips/warnings; write to folder |
-| Pipeline | `src/pipeline.ts` | Orchestrates import → detect → generate → optional render |
+| Session import | `src/session/` | Fetch, group, store sessions |
+| Workflow detection | `src/workflow/detect-steps.ts` | Events → `WorkflowStep[]` |
+| Screenshot rendering | `src/screenshot/render-step.ts` | Frame + hotspot → PNG |
+| AI doc from steps | `src/doc-from-steps/` | Steps → written guide |
+| Pipeline | `src/pipeline.ts` | Orchestrates the above |
+
+### Screenpipe Pipe
+
+In the Screenpipe desktop app, open **Pipes** and run **doc-from-usage**. Configure `product_app_name`, `product_window_name`, and `output_path` in the pipe settings if needed.
